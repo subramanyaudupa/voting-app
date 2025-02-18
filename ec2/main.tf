@@ -40,6 +40,7 @@ data "http" "my_ip" {
 resource "aws_security_group" "jumpbox_sg" {
   name        = "jumpbox-security-group"
   description = "Allow SSH Access"
+  vpc_id      = aws_vpc.voting_vpc.id 
 
   ingress {
     from_port   = 22
