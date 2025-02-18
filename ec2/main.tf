@@ -1,9 +1,14 @@
 provider "aws" {
-  region = "us-east-1" # Change if needed
+  region = "us-east-1" # Replace with your desired region
+}
+
+# Fetch the latest RHEL 8 AMI ID
+data "aws_ssm_parameter" "rhel8_ami" {
+  name = "/aws/service/redhat/rhel8/latest/image_id"
 }
 
 resource "aws_instance" "jumpbox" {
-  ami             = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 (Update AMI ID if needed)
+  ami             = data.aws_ssm_parameter.rhel8_ami.value
   instance_type   = "t3.medium"
   key_name        = "my-key"  # Replace with your key-pair name
   vpc_security_group_ids = [aws_security_group.jumpbox_sg.id]
