@@ -45,7 +45,7 @@ resource "aws_security_group" "jumpbox_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.my_ip.body)}/32"]  # Auto-detects your IP
+    cidr_blocks = ["${chomp(data.http.my_ip.response_body)}/32"]  # Auto-detects your IP
   }
 
   egress {
