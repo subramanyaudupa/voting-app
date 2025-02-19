@@ -32,7 +32,7 @@ module "vpc" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  azs             = ["us-east-1a", "us-east-1b"]  # Add this line
+  azs             = ["us-east-1a", "us-east-1b"]
   private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
   public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
 
@@ -72,7 +72,7 @@ resource "aws_security_group" "eks_nodes_sg" {
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Allow all (adjust for security)
+    cidr_blocks = ["0.0.0.0/0"]  
   }
 
   egress {
