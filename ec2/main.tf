@@ -1,3 +1,8 @@
+provider "aws" {
+  region = "us-east-1"
+}
+
+# Fetch the latest RHEL 9 AMI from AWS Official Red Hat Account
 data "aws_ami" "rhel9" {
   most_recent = true
   owners      = ["309956199498"]  # AWS Official Red Hat Account
@@ -21,8 +26,9 @@ resource "tls_private_key" "key_pair" {
 
 # Save the key pair locally (so you can use it to SSH)
 resource "local_file" "private_key" {
-  content  = tls_private_key.key_pair.private_key_pem
-  filename = "${path.module}/jumpbox-key.pem"
+  content         = tls_private_key.key_pair.private_key_pem
+  filename        = "${path.module}/jumpbox-key.pem"
+  file_permission = "0400"
 }
 
 # Create the key pair in AWS
@@ -34,6 +40,39 @@ resource "aws_key_pair" "generated_key" {
 # Get your public IP dynamically (for SSH security)
 data "http" "my_ip" {
   url = "http://checkip.amazonaws.com"
+}
+
+# Create a VPC
+resource "aws_vpc" "voting_vpc" {
+  cidr_block = "10.0.0.0/16"
+}
+
+# Create an Internet Gateway (Needed for Public Access)
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.voting_vpc.id
+}
+
+# Create a Route Table for Public Subnet
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.voting_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+}
+
+# Public Subnet (Auto-assigns Public IP)
+resource "aws_subnet" "public_subnet" {
+  vpc_id                  = aws_vpc.voting_vpc.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+}
+
+# Associate the Public Subnet with the Public Route Table
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_rt.id
 }
 
 # Security Group for Jumpbox (Allows SSH from your IP only)
@@ -55,18 +94,6 @@ resource "aws_security_group" "jumpbox_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-}
-
-# VPC
-resource "aws_vpc" "voting_vpc" {
-  cidr_block = "10.0.0.0/16"
-}
-
-# Public Subnet
-resource "aws_subnet" "public_subnet" {
-  vpc_id                  = aws_vpc.voting_vpc.id
-  cidr_block              = "10.0.1.0/24"
-  map_public_ip_on_launch = true
 }
 
 # EC2 Instance - Jumpbox
@@ -92,9 +119,3 @@ output "instance_public_ip" {
 output "ssh_command" {
   value = "ssh -i jumpbox-key.pem ec2-user@${aws_instance.jumpbox.public_ip}"
 }
- /* 
-  The above Terraform code creates an EC2 instance (Jumpbox) in a public subnet with a security group that allows SSH access from your IP only. 
-  The Jumpbox is based on the latest RHEL 9 AMI and uses an SSH key pair that Terraform generates. The public IP of the Jumpbox is outputted at the end, along with the SSH command to connect to it. 
-  Step 3: Deploy the Jumpbox 
-  Now, let’s deploy the Jumpbox using Terraform. 
-*/
